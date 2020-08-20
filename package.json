@@ -1,13 +1,17 @@
 {
   "name": "js-simple-di",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Simple Dependency Injection library for JS",
   "main": "build/index.js",
+  "files": [
+    "lib/**/*"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "jest --config jestconfig.json",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint"
   },
   "repository": {
