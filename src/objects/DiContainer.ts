@@ -87,13 +87,11 @@ export class DiContainer {
 
     public addClassesFromPaths(dirs: string[]) {
         for (const dir of dirs) {
-            const joined = path.join(__dirname, dir);
-            this.addClassesWorker(joined);
+            this.addClassesWorker(dir);
         }
     }
 
     public addClassesWorker(dir: string) {
-        debug(dir);
         const files = fs.readdirSync(dir, {withFileTypes: true});
         for (const file of files) {
             const filePath = path.join(dir, file.name);
