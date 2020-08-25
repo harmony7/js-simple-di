@@ -1,54 +1,41 @@
 import Debug from 'debug';
 const debug = Debug('js-simple-di');
 
-import {
-    DiContainer,
-} from "./DiContainer";
-import {
-    IDependencyDefinition,
-    parseDepends
-} from "../utils/dependencyDefinitions";
-import {
-    IDiConstructor,
-    makeDisplayName,
-} from "../utils/constructors";
+import { DiContainer } from './DiContainer';
+import { IDependencyDefinition, parseDepends } from '../utils/dependencyDefinitions';
+import { Constructor, makeDisplayName } from '../utils/constructors';
 
 interface IStackItem<T> {
-    interface: string;
-    ctor: IDiConstructor<T>;
+    serviceName: string;
+    ctor: Constructor<T>;
 }
 
 export class DiContext<T> {
-
     // parent dependency container
     private readonly diContainer: DiContainer;
 
     // map of constructor: instance of already created items
-    private readonly objects: Map<IDiConstructor<any>, any | null>;
+    private readonly objects: Map<Constructor<any>, any | null>;
 
     // current stack of objects being created
     private readonly currentStack: IStackItem<any>[];
 
-    public constructor(diContainer: DiContainer, ctor: IDiConstructor<T>) {
-
+    public constructor(diContainer: DiContainer, ctor: Constructor<T>) {
         this.diContainer = diContainer;
 
         this.objects = new Map();
         this.currentStack = [];
-        this.currentStack.push(
-            {
-                interface: 'root',
-                ctor,
-            }
-        );
-
+        this.currentStack.push({
+            serviceName: 'root',
+            ctor,
+        });
     }
 
-    private static displayStackItem(item: IStackItem<any>) {
+    private static displayStackItem<T>(item: IStackItem<T>) {
         const displayName = makeDisplayName(item.ctor);
         let message = displayName;
-        if (displayName !== item.interface) {
-            message += ' (as ' + item.interface + ')';
+        if (displayName !== item.serviceName) {
+            message += ' (as ' + item.serviceName + ')';
         }
         return message;
     }
@@ -80,7 +67,8 @@ export class DiContext<T> {
         // PENDING state
         this.objects.set(ctor, null);
 
-        const { depends } = ctor;
+        const depends = this.diContainer.getServiceDepends(ctor);
+
         const displayName = makeDisplayName(ctor);
 
         if (depends === undefined) {
@@ -91,8 +79,8 @@ export class DiContext<T> {
         }
 
         debug('Constructing dependencies to prepare to call constructor of ' + displayName);
-        const constructorParameters = parseDepends(depends)
-            .map(depend => this.findDepend(depend));
+        const constructorParameters = parseDepends(depends ?? []).map((depend) => this.findDepend(depend));
+        debug('Constructor Parameters', constructorParameters);
 
         const instance = new ctor(...constructorParameters);
         this.objects.set(ctor, instance);
@@ -113,16 +101,16 @@ export class DiContext<T> {
         } else if (type === 'single' && constructorsOfDepend.length !== 1) {
             debug(
                 "ERROR: Can't construct " +
-                displayName +
-                ' because its dependency ' +
-                name +
-                ' does not have exactly one implementation.',
+                    displayName +
+                    ' because its dependency ' +
+                    name +
+                    ' does not have exactly one implementation.',
             );
             return null;
         } else {
             const objectsForDepend = constructorsOfDepend.map((ctor) => {
                 try {
-                    this.currentStack.push({interface: name, ctor, });
+                    this.currentStack.push({ serviceName: name, ctor });
                     return this.constructItem();
                 } finally {
                     this.currentStack.pop();
@@ -131,5 +119,4 @@ export class DiContext<T> {
             return type === 'single' ? objectsForDepend[0] : objectsForDepend;
         }
     }
-
 }

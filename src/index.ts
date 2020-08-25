@@ -1,1 +1,1 @@
-export { DiContainer } from "./objects/DiContainer";
+export { DiContainer } from './objects/DiContainer';
