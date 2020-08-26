@@ -65,7 +65,7 @@ function findClassDependencies<T>(ctor: IDiConstructor<T>) {
         classServiceNames.push(name);
     }
 
-    return { serviceNames: classServiceNames, depends };
+    return { serviceNames: classServiceNames, depends: depends ?? null };
 }
 
 export class DiContainer {
@@ -133,34 +133,41 @@ export class DiContainer {
         debug('Depends', depends);
 
         const currentList = this.serviceToDepends.get(ctor);
-        if (currentList != null) {
-            if (depends === null) {
-                debug('current is not null and new is null, we are skipping.');
-                return;
-            }
-            throw new Error('Cannot redefine depends of ' + displayName);
-        } else if (currentList === null) {
-            if (depends === null) {
+
+        if (depends == null) {
+            if (currentList === undefined) {
+                debug('Defining depends as null');
+                this.serviceToDepends.set(ctor, null);
+            } else if (currentList === null) {
                 debug('current list is null and new is null, we are skipping');
-                return;
+            } else {
+                debug('current is not null and new is null, we are skipping.');
             }
-            debug('Redefining depends from null');
+            return;
         }
 
-        if (depends != null) {
-            const parsedDepends = parseDepends(depends);
+        const parsedDepends = parseDepends(depends);
+        if (currentList === undefined) {
+            debug('Adding new depends');
+        } else if (currentList === null) {
+            debug('Redefining depends from null');
+        } else {
+            if (JSON.stringify(currentList) === JSON.stringify(parsedDepends)) {
+                debug("Redefining to same value, we are skipping");
+                return ;
+            }
+            throw new Error('Cannot redefine depends of ' + displayName);
+        }
+
+        this.serviceToDepends.set(ctor, parsedDepends);
+
+        if (parsedDepends.length > 0) {
             const dependencyList = parsedDepends.map((dep) => {
                 return dep.name + ', type ' + dep.type;
             });
-            if (dependencyList.length > 0) {
-                debug('It holds dependencies on ' + dependencyList.join('; '));
-            } else {
-                debug('No depends added');
-            }
-            this.serviceToDepends.set(ctor, parsedDepends);
+            debug('It holds dependencies on ' + dependencyList.join('; '));
         } else {
-            debug('Defining depends as null');
-            this.serviceToDepends.set(ctor, null);
+            debug('No depends added');
         }
     }
 

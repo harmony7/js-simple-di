@@ -78,3 +78,42 @@ test('thing3', function() {
     expect(obj.c.i).toBe('x');
 
 });
+
+test('Should be ok to add same class multiple time', function() {
+
+    const di = new DiContainer();
+
+    class Clock {
+        static depends = null;
+        i = 'x';
+    }
+
+    class MyClass {
+        static depends = ['Clock'];
+        c: Clock;
+        constructor(c: Clock) {
+            this.c = c;
+        }
+    }
+
+    @di.depends("Clock")
+    class MyClass2 {
+        static depends = ['Clock'];
+        c: Clock;
+        constructor(c: Clock) {
+            this.c = c;
+        }
+    }
+
+    di.addClass(Clock);
+    di.addClass(MyClass);
+    di.addClass(MyClass);
+
+    di.addClass(MyClass2);
+    di.addClass(MyClass2);
+
+    const obj = di.constructByName<MyClass>('MyClass');
+
+    expect(obj.c.i).toBe('x');
+
+});
